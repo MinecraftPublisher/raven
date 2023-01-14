@@ -146,8 +146,8 @@ const uci = {
                 for (let move in data) {
                     if (o) {
                         states.push({
-                            input: data.slice(move - ORDER < 0 ? 0 : move - ORDER, move).join(' '),
-                            output: data[move]
+                            i: data.slice(move - ORDER < 0 ? 0 : move - ORDER, move).join(' '),
+                            o: data[move]
                         })
                     }
             
@@ -159,18 +159,7 @@ const uci = {
             
                 log('[INFO] Running training... ' + ID)
             
-                agent2.train(states/*, {
-                    iterations: ITERATIONS,
-                    callbackPeriod,
-                    log: false,
-                    callback: () => log('[INFO] Iterations: ' + (i++ * callbackPeriod))
-                }*/)
-            
-                // const JJ = agent.toJSON()
-                // const BEFORE_VALUES = JJ['options']['dataFormatter']['values'].length
-                // JJ['options']['dataFormatter']['values'] = Array.from(new Set([...JJ['options']['dataFormatter']['values'].filter(e => e.input.split(' ').length === ORDER), ...states]))
-                // const STR = JSON.stringify(JJ)
-                // const AFTER_VALUES = JJ['options']['dataFormatter']['values'].length
+                agent2.train(states)
             
                 const AFTER_SIZE = Math.floor(JSON.stringify(agent2.data).length / 1000)
                 // (\n\[INFO\] Iterations: .+)*
@@ -178,17 +167,13 @@ const uci = {
                     if(f.includes(ID)) return '[INFO] Training finished! - Model size: ' + AFTER_SIZE + 'kb'
                     else return f
                 }))
-                // fs.writeFileSync('info.txt', fs.readFileSync('info.txt', 'utf-8').replaceAll(/(\n\[INFO\] Iterations: .+)+/g, ''))
-                // fs.writeFileSync('model.json', STR)
+                
                 agent2.save('q.json')
             }
 
             /*TRAIN.MJS*/
 
             await train(result, _moves)
-            // fs.writeFileSync('temp/' + id + '.json', data)
-            // exec('nohup ~/projects/raven/train.mjs ' + id + ' &')
-            // exec('~/projects/raven/train.mjs ' + id)
         }
     },
     'quit': () => {

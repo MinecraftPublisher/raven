@@ -17,7 +17,7 @@ const log = (t) => t.startsWith('[INFO] ') ? fs.writeFileSync('info.txt', fs.rea
  * q uses a key-value pair system to store 
  */
 
-const fillter = ((f) => f.filter(e => e.input.length === 0 ? true : f.filter(j => e.input === j.input && e.output === j.output).length === 1))
+const fillter = ((f) => f.filter(e => e.i.length === 0 ? true : f.filter(j => e.i === j.i && e.o === j.o).length === 1))
 
 export const q = ((data) => {
     const THIS = {}
@@ -37,13 +37,13 @@ export const q = ((data) => {
         // THIS.data = fillter(THIS.data)
     })
     THIS.run = ((input) => {
-        let output = THIS.data.filter(e => e.input == input)
+        let output = THIS.data.filter(e => e.i == input)
         // console.log(output)
-        if (output.length > 1) output = output[Math.floor(mulberry32() * output.length)].input
-        else if (output.length == 1) output = output[0].input
-        else output = closest(input, THIS.data.map(e => e['input']))
+        if (output.length > 1) output = output[Math.floor(mulberry32() * output.length)].i
+        else if (output.length == 1) output = output[0].i
+        else output = closest(input, THIS.data.map(e => e['i']))
 
-        return THIS.data[THIS.data.map(e => e['input']).indexOf(output)]['output']
+        return THIS.data[THIS.data.map(e => e['i']).indexOf(output)]['o']
     })
 
     return THIS
