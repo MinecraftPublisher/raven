@@ -43,7 +43,7 @@ if(fs.existsSync('q.json')) agent.load('q.json')
 const achieve = (random) => {
     let d = JSON.parse(fs.readFileSync('stats.json', 'utf-8'))
     d[random ? 'random' : 'predicted']++
-    fs.writeFileSync('stats.json', JSON.stringify(d, null, 4))
+    fs.writeFileSync('./stats.json', JSON.stringify(d, null, 4))
 }
 
 async function choice() {
