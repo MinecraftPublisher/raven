@@ -1,5 +1,4 @@
-import { closest, distance } from 'fastest-levenshtein'
-import { Chess } from 'chess.js'
+import { closest } from 'fastest-levenshtein'
 import * as fs from 'fs'
 
 let seed = 0

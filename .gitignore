@@ -125,3 +125,10 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# stuff
+board.txt
+raven.mjs
+stats.json
+_raven
+raven.js

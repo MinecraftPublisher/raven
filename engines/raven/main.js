@@ -1,13 +1,30 @@
 #!/usr/bin/env node
 
+/**
+ * AVAILABLE FLAGS:
+ * flag.log -> Logs output to `out.txt` and `info.txt`
+ * flag.stats -> Write statistics (predicted and random) to `stats.json`
+ * floag.board -> Write the chess board to `board.txt`
+ */
+
+const Q_DATA = ``
+
 import { Chess } from 'chess.js'
 import { q } from './q.mjs'
+//import { mve } from './prc.js'
 import * as readline from 'readline'
 import * as fs from 'fs'
-import { mve, chunk } from './prc.js'
-import { exec } from 'child_process'
 
-const log = (t) => t.startsWith('[INFO] ') ? fs.writeFileSync('info.txt', fs.readFileSync('info.txt', 'utf-8') + '\n' + t) : fs.writeFileSync('out.txt', fs.readFileSync('out.txt', 'utf-8') + '\n' + t)
+// placeholder for real prc cus i was too lazy to implement it :)
+const mve = ((t) => t)
+
+const log = (t) => {
+    if (process.argv.includes('flag.log')) t.startsWith('[INFO] ') ? fs.writeFileSync('info.txt', fs.readFileSync('info.txt', 'utf-8') + '\n' + t) : fs.writeFileSync('out.txt', fs.readFileSync('out.txt', 'utf-8') + '\n' + t)
+}
+
+const wBoard = (() => {
+    if (process.argv.includes('flag.board')) fs.writeFileSync('board.txt', mve(game.ascii()))
+})
 
 const rl = readline.createInterface({
     input: process.stdin,
@@ -38,12 +55,12 @@ let playingcolor = ''
 let _moves = []
 
 // if(fs.existsSync('model.json')) agent.fromJSON(JSON.parse(fs.readFileSync('model.json', 'utf-8')))
-if(fs.existsSync('q.json')) agent.load('q.json')
+if (fs.existsSync('q.json')) agent.load('q.json')
 
 const achieve = (random) => {
     let d = JSON.parse(fs.readFileSync('stats.json', 'utf-8'))
     d[random ? 'random' : 'predicted']++
-    fs.writeFileSync('./stats.json', JSON.stringify(d, null, 4))
+    if (process.argv.includes('flag.stats')) fs.writeFileSync('./stats.json', JSON.stringify(d, null, 4))
 }
 
 async function choice() {
@@ -51,21 +68,21 @@ async function choice() {
     let agentmove = ''
     // let m = moves[Math.floor(Math.random() * moves.length)]
     let m = (function feedback(depth = 20) {
-        if(depth === 0) {
+        if (depth === 0) {
             achieve(true)
             return moves[Math.floor(Math.random() * moves.length)]
         }
 
         try {
             let mm = agent.run(_moves.join(' '))
-            if(mm.length !== 4) {
-                if(mm.split(' ').filter(e => e.length === 4).length === 0) return feedback(depth - 1)
+            if (mm.length !== 4) {
+                if (mm.split(' ').filter(e => e.length === 4).length === 0) return feedback(depth - 1)
                 else mm = mm.split(' ').filter(e => e.length === 4)[0]
             }
             agentmove = mm
             let m2 = parseVerbose(mm)
-    
-            if(moves.filter(e => e.from === m2.from && e.to === m2.to)[0]) {
+
+            if (moves.filter(e => e.from === m2.from && e.to === m2.to)[0]) {
                 achieve(false)
                 return m2
             }
@@ -81,14 +98,14 @@ async function choice() {
     game.move(m)
     _moves.push(m2)
 
-    fs.writeFileSync('board.txt', mve(game.ascii()))
+    // fs.writeFileSync('board.txt', mve(game.ascii()))
     // log('[INFO] Move: ' + m2 + ' - Agent: ' + agentmove)
     out('bestmove ' + m2)
 }
 
 const uci = {
     'uci': () => {
-        out(`id author Martia\nid name Raven\nuciok`, false)
+        out(`id author Martia\\nid name Raven\\nuciok`, false)
     },
     'isready': () => {
         out('readyok')
@@ -106,14 +123,14 @@ const uci = {
                 game.move(parseVerbose(e))
             })
             // console.log(game.moves({ verbose: true }).filter(e => e.promotion))
-            fs.writeFileSync('board.txt', mve(game.ascii()))
+            wBoard()
         } else {
             if (playingcolor === '') {
                 playingcolor = 'white'
             }
 
             game = new Chess()
-            fs.writeFileSync('board.txt', mve(game.ascii()))
+            wBoard()
         }
     },
     'go': choice,
@@ -129,19 +146,15 @@ const uci = {
             const ID = Math.floor(Math.random() * 20000).toString()
 
             const train = async (order, _moves) => {
-                /* if (JSON.parse(fs.readFileSync('trained.json')).includes(_moves.join(' '))) {
-                    return process.exit(0)
-                }
-                fs.writeFileSync('trained.json', JSON.stringify([...JSON.parse(fs.readFileSync('trained.json')), _moves.join(' ')], null, 4)) */
-            
+
                 let agent2 = q()
                 let data = _moves
                 let _game = new Chess()
                 let states = []
-            
-                if(fs.existsSync('q.json')) agent2.load('q.json')
+
+                if (fs.existsSync('q.json')) agent2.load('q.json')
                 else agent2.save('q.json')
-            
+
                 let o = order === 1 ? true : false
                 for (let move in data) {
                     if (o) {
@@ -150,24 +163,26 @@ const uci = {
                             o: data[move]
                         })
                     }
-            
+
                     o = !o
                 }
-                
+
                 let i = 0
                 const BEFORE_SIZE = Math.floor(JSON.stringify(agent2.data).length / 1000)
-            
+
                 log('[INFO] Running training... ' + ID)
-            
+
                 agent2.train(states)
-            
+
                 const AFTER_SIZE = Math.floor(JSON.stringify(agent2.data).length / 1000)
                 // (\n\[INFO\] Iterations: .+)*
-                fs.writeFileSync('info.txt', fs.readFileSync('info.txt', 'utf-8').replaceAll(/(\[INFO\] Running training\.\.\. .+)/g, (f) => {
-                    if(f.includes(ID)) return '[INFO] Training finished! - Model size: ' + AFTER_SIZE + 'kb'
-                    else return f
-                }))
-                
+                if (process.argv.includes('flag.log')) {
+                    fs.writeFileSync('info.txt', fs.readFileSync('info.txt', 'utf-8').replaceAll(/(\[INFO\] Running training\.\.\. .+)/g, (f) => {
+                        if (f.includes(ID)) return '[INFO] Training finished! - Model size: ' + AFTER_SIZE + 'kb'
+                        else return f
+                    }))
+                }
+
                 agent2.save('q.json')
             }
 
@@ -187,7 +202,7 @@ const out = (t, l = true) => {
 }
 
 function main() {
-    if (!fs.existsSync('out.txt')) fs.writeFileSync('out.txt', '[BEGINNING OF LOGS]')
+    if (!fs.existsSync('out.txt') && process.argv.includes('flag.log')) fs.writeFileSync('out.txt', '[BEGINNING OF LOGS]')
     rl.question('', (t) => {
         log('[IN] ' + t)
         if (uci[t.split(' ')[0]]) {
