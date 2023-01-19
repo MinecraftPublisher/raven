@@ -40,8 +40,10 @@ let q = (() => {
     f1 = f1.replaceAll(`import { closest } from 'fastest-levenshtein'`, f2)
     f1 = f1.replaceAll(`import * as fs from 'fs'\n`, '')
     f1 = f1.replaceAll(/\nconst log = .+\n/g, '')
-    f1 = f1.replaceAll(`THIS.load = ((file) => THIS.data = JSON.parse(fs.readFileSync(file, 'utf-8')))`, `THIS.load = ((file) => THIS.data = JSON.parse(/*fs.readFileSync(file, 'utf-8')*/Q_DATA))`)
-    f1 = f1.replaceAll(`THIS.save = ((file) => fs.writeFileSync(file, JSON.stringify(THIS.data)))`, `THIS.save = ((file) => fs.writeFileSync(__filename, fs.readFileSync(__filename, 'utf-8')).replaceAll(/const Q_DATA = \`.+\`;/g, \`const Q_DATA = \\\`\${JSON.stringify(THIS.data)}\\\`\`))`)
+
+    // this causes HUGE problems with larger datasets!
+    // f1 = f1.replaceAll(`THIS.load = ((file) => THIS.data = JSON.parse(fs.readFileSync(file, 'utf-8')))`, `THIS.load = ((file) => THIS.data = JSON.parse(/*fs.readFileSync(file, 'utf-8')*/Q_DATA))`)
+    // f1 = f1.replaceAll(`THIS.save = ((file) => fs.writeFileSync(file, JSON.stringify(THIS.data)))`, `THIS.save = ((file) => fs.writeFileSync(__filename, fs.readFileSync(__filename, 'utf-8')).replaceAll(/const Q_DATA = \`.+\`;/g, \`const Q_DATA = \\\`\${JSON.stringify(THIS.data)}\\\`\`))`)
 
     return `const q = (() => { ${f1.replaceAll('export const ', 'const ')}; return q; })()`
 })()
@@ -59,7 +61,8 @@ main = main.replaceAll(`import * as readline from 'readline'
 import * as fs from 'fs'`, `const readline = require('readline')
 const fs = require('fs')`)
 
-try { main = main.replaceAll(`const Q_DATA = \`\``, `const Q_DATA = \`${fs.readFileSync('q.json', 'utf-8')}\``) } catch { }
+// this causes HUGE problems with larger datasets!
+// try { main = main.replaceAll(`const Q_DATA = \`\``, `const Q_DATA = \`${fs.readFileSync('q.json', 'utf-8')}\``) } catch { }
 
 console.log('Minifying...')
 

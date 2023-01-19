@@ -26,7 +26,7 @@ export const q = ((data) => {
 
     // save-load functions
     THIS.load = ((file) => THIS.data = JSON.parse(fs.readFileSync(file, 'utf-8')))
-    THIS.save = ((file) => fs.writeFileSync(file, JSON.stringify(THIS.data)))
+    THIS.save = ((file) =>  fs.writeFileSync(file, JSON.stringify(THIS.data)))
 
     // q-specific functions
     THIS.train = ((data) => {
