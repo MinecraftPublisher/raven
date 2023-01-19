@@ -5,8 +5,11 @@ console.log('Reading data...')
 
 if (!globalThis['Bun']) globalThis['Bun'] = {}
 
-let COC = 255300
+let COC = 507000
 let pgn = fs.readFileSync('filtered.pgn', 'utf-8').split('\n').slice(COC)
+const LNGTH = pgn.length
+
+let chunks = fs.readdirSync('qs/').length
 
 function msToTime(duration) {
     let milliseconds = Math.floor((duration % 1000) / 100)
@@ -22,6 +25,8 @@ console.log('Done reading data.')
 
 let start = +new Date
 
+let pushTimes = []
+
 const ORDER = 2
 
 const COUNTER = 100
@@ -32,44 +37,66 @@ import('../engines/raven/q.mjs').then(qd => {
     console.log('Starting...')
     pgn.forEach((e, i) => {
         if (i >= COC) {
-            if (i % COUNTER === 0) console.time('Part')
+            if (i % COUNTER === 0) {
+                start = +new Date
+                console.time('part')
+            }
 
+            //[time] console.time('pgn')
             let game = new Chess()
             game.loadPgn(e)
             let _moves = game.history({ verbose: true }).map(j => j.from + j.to + (j.promotion || ''))
+            //[time] console.timeEnd('pgn')
 
+            //[time] console.time('state')
             let data = _moves
             let states = []
 
-            let o = /*game.isCheckmate()*/true
+            let o = game.isCheckmate()
             for (let move in data) {
-                /* if (o) { */
-                states.push({
-                    i: data.slice(move - ORDER < 0 ? 0 : move - ORDER, move).join(' '),
-                    o: data[move]
-                })
-                // }
+                if (o) {
+                    states.push({
+                        i: data.slice(move - ORDER < 0 ? 0 : move - ORDER, move).join(' '),
+                        o: data[move]
+                    })
+                }
 
-                // o = !o
+                o = !o
             }
+            //[time] console.timeEnd('state')
 
+            //[time] console.time('train')
             q.train(states)
+            //[time] console.timeEnd('train')
 
             if (i % COUNTER === 0) {
-                let ent = ((+new Date) - start) / COUNTER
-                let eta = ent * (pgn.length - i)
+                console.clear()
+                //[time] console.time('eta')
 
-                console.log('done: ' + i + '/' + (pgn.length + COC) + ' | ' + Math.round((i / (pgn.length + COC)) * 100 * 1000) / 1000 + '% | left: ' + msToTime(eta) + ' | size: ' + Math.floor(JSON.stringify(q.data).length / 1000) / 1000 + 'mb')
-                console.timeEnd('Part')
+                console.log('done: ' + i + '/' + (LNGTH) + ' | ' + Math.round((i / (LNGTH)) * 100 * 1000) / 1000 + '% | chunks: ' + chunks)
 
-                q.save('q.json')
-                fs.writeFileSync('pgntofromto.js', fs.readFileSync('pgntofromto.js', 'utf-8').replaceAll('let COC = ' + COC.toString(), 'let COC = ' + i.toString()))
-                start = +new Date
                 COC = i
+
+                // I CALL THIS:
+                // THE GREAT PURGE!!!!
+                if((+new Date) - start > 3) {
+                    fs.copyFileSync('q.json', 'qs/q' + Math.floor(Math.random() * 100000) + '.json')
+                    q = qd.q([])
+                    chunks = fs.readdirSync('qs/').length
+                }
+
+                console.timeEnd('part')
+                // process.exit(0)
+            }
+
+            if(i % (COUNTER * 5) === 0) {
+                console.log('SAVE SAVE SAVE!!!!')
+                fs.writeFileSync('pgntofromto.js', fs.readFileSync('pgntofromto.js', 'utf-8').replaceAll(/let COC = \d+/g, 'let COC = ' + i.toString()))
+                q.save('q.json')
             }
 
             if ((i + COC) >= 3451135) {
-                fs.writeFileSync('parsed.json', JSON.stringify(fromto))
+                q.save('q.json')
                 process.exit(0)
             }
         }

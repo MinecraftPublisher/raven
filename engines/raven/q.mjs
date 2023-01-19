@@ -22,7 +22,8 @@ export const q = ((data) => {
     const THIS = {}
 
     // allocate data
-    THIS.data = (typeof data === typeof 'hi' ? JSON.parse(data) : data) || []
+    // THIS.data = []
+    THIS.data = (typeof data === typeof 'data' ? JSON.parse(data) : data) || []
 
     // save-load functions
     THIS.load = ((file) => THIS.data = JSON.parse(fs.readFileSync(file, 'utf-8')))
@@ -30,8 +31,7 @@ export const q = ((data) => {
 
     // q-specific functions
     THIS.train = ((data) => {
-        let d = typeof data === typeof [] ? data : [data]
-        THIS.data = [...THIS.data, ...d]
+        THIS.data = THIS.data.concat(...data)
         // uncomment to disable often plays!
         // often plays is a chance-based system for the ai which increases the chance of a move being played.
         // THIS.data = fillter(THIS.data)

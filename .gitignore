@@ -133,6 +133,8 @@ dist
 
 sanitizing/unfiltered.pgn
 sanitizing/filtered.pgn
+sanitizing/qs/
+
 board.txt
 raven.mjs
 _raven
