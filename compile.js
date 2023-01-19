@@ -74,3 +74,5 @@ console.log('Done! Took: ' + (END - START) + 'ms')
 console.log('Minified size: ' + Math.round(main.length / 1000) + 'kb')
 
 fs.writeFileSync('raven.js', main)
+
+module.exports = true

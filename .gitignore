@@ -127,13 +127,16 @@ dist
 .pnp.*
 
 # stuff
+out.txt
+info.txt
+stats.json
+
 sanitizing/unfiltered.pgn
 sanitizing/filtered.pgn
 board.txt
 raven.mjs
-stats.json
 _raven
 raven
 raven.js
-sanitizing/temp.json
+sanitizing/q.json
 sanitizing/parsed.json

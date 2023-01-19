@@ -18,6 +18,8 @@ import * as fs from 'fs'
 // placeholder for real prc cus i was too lazy to implement it :)
 const mve = ((t) => t)
 
+console.log('Raven uci engine')
+
 const log = (t) => {
     if (process.argv.includes('flag.log')) t.startsWith('[INFO] ') ? fs.writeFileSync('info.txt', fs.readFileSync('info.txt', 'utf-8') + '\n' + t) : fs.writeFileSync('out.txt', fs.readFileSync('out.txt', 'utf-8') + '\n' + t)
 }
@@ -55,9 +57,13 @@ let playingcolor = ''
 let _moves = []
 
 // if(fs.existsSync('model.json')) agent.fromJSON(JSON.parse(fs.readFileSync('model.json', 'utf-8')))
-if (fs.existsSync('q.json')) agent.load('q.json')
 
 const achieve = (random) => {
+    if(!fs.existsSync('stats.json')) fs.writeFileSync('stats.json', JSON.stringify({
+        random: 0,
+        predicted: 0
+    }))
+
     let d = JSON.parse(fs.readFileSync('stats.json', 'utf-8'))
     d[random ? 'random' : 'predicted']++
     if (process.argv.includes('flag.stats')) fs.writeFileSync('./stats.json', JSON.stringify(d, null, 4))
@@ -67,14 +73,17 @@ async function choice() {
     let moves = game.moves({ verbose: true })
     let agentmove = ''
     // let m = moves[Math.floor(Math.random() * moves.length)]
-    let m = (function feedback(depth = 20) {
+    let m = (function feedback(depth = 5) {
         if (depth === 0) {
             achieve(true)
             return moves[Math.floor(Math.random() * moves.length)]
         }
 
         try {
-            let mm = agent.run(_moves.join(' '))
+            const start = +new Date
+            let mm = agent.run(_moves)
+            const end = +new Date
+
             if (mm.length !== 4) {
                 if (mm.split(' ').filter(e => e.length === 4).length === 0) return feedback(depth - 1)
                 else mm = mm.split(' ').filter(e => e.length === 4)[0]
@@ -86,7 +95,10 @@ async function choice() {
                 achieve(false)
                 return m2
             }
-            else return feedback(depth - 1)
+            else {
+                if(end - start > 500) return feedback(0)
+                else return feedback(depth - 1)
+            }
         } catch (e) {
             console.log(e)
             return feedback(depth - 1)
@@ -105,6 +117,8 @@ async function choice() {
 
 const uci = {
     'uci': () => {
+        // im gonna load the engine here!!!
+        if (fs.existsSync('q.json')) agent.load('q.json')
         out(`id author Martia\\nid name Raven\\nuciok`, false)
     },
     'isready': () => {
@@ -134,7 +148,9 @@ const uci = {
         }
     },
     'go': choice,
-    'setoption': () => { },
+    'setoption': (t) => {
+        if(t.includes('flag.ucidebug')) process.argv = ['flag.log', 'flag.stats', 'flag.board']
+    },
     'stop': async () => {
         if (game.isGameOver() && !game.isDraw()) {
             let result = game.isCheckmate() ? 1 : 0
@@ -203,6 +219,8 @@ const out = (t, l = true) => {
 
 function main() {
     if (!fs.existsSync('out.txt') && process.argv.includes('flag.log')) fs.writeFileSync('out.txt', '[BEGINNING OF LOGS]')
+    if (!fs.existsSync('info.txt') && process.argv.includes('flag.log')) fs.writeFileSync('info.txt', '[BEGINNING OF INFO LOGS]')
+
     rl.question('', (t) => {
         log('[IN] ' + t)
         if (uci[t.split(' ')[0]]) {
