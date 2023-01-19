@@ -5,7 +5,7 @@ console.log('Reading data...')
 
 if (!globalThis['Bun']) globalThis['Bun'] = {}
 
-let COC = 230100
+let COC = 246900
 let pgn = fs.readFileSync('filtered.pgn', 'utf-8').split('\n').slice(COC)
 
 function msToTime(duration) {
@@ -36,7 +36,7 @@ import('../engines/raven/q.mjs').then(qd => {
 
             let game = new Chess()
             game.loadPgn(e)
-            let _moves = game.history({ verbose: true }).map(j => j.from + j.to)
+            let _moves = game.history({ verbose: true }).map(j => j.from + j.to + (j.promotion || ''))
 
             let data = _moves
             let states = []

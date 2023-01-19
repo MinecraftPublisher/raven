@@ -8,15 +8,189 @@
  */
 
 const Q_DATA = ``
-
 const BYPASS = true
-process.argv = ['flag.log', 'flag.stats', 'flag.board']
 
 import { Chess } from 'chess.js'
 import { q } from './q.mjs'
 //import { mve } from './prc.js'
 import * as readline from 'readline'
 import * as fs from 'fs'
+
+let minimaxDepth = 2
+
+const ai = (() => {
+    let game = new Chess()
+
+    const reverseArray = (array) => array.slice().reverse()
+
+    let whitePawnEval =
+        [
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0],
+            [1.0, 1.0, 2.0, 3.0, 3.0, 2.0, 1.0, 1.0],
+            [0.5, 0.5, 1.0, 2.5, 2.5, 1.0, 0.5, 0.5],
+            [0.0, 0.0, 0.0, 2.0, 2.0, 0.0, 0.0, 0.0],
+            [0.5, -0.5, -1.0, 0.0, 0.0, -1.0, -0.5, 0.5],
+            [0.5, 1.0, 1.0, -2.0, -2.0, 1.0, 1.0, 0.5],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        ]
+
+    let blackPawnEval = reverseArray(whitePawnEval)
+
+    let knightEval =
+        [
+            [-5.0, -4.0, -3.0, -3.0, -3.0, -3.0, -4.0, -5.0],
+            [-4.0, -2.0, 0.0, 0.0, 0.0, 0.0, -2.0, -4.0],
+            [-3.0, 0.0, 1.0, 1.5, 1.5, 1.0, 0.0, -3.0],
+            [-3.0, 0.5, 1.5, 2.0, 2.0, 1.5, 0.5, -3.0],
+            [-3.0, 0.0, 1.5, 2.0, 2.0, 1.5, 0.0, -3.0],
+            [-3.0, 0.5, 1.0, 1.5, 1.5, 1.0, 0.5, -3.0],
+            [-4.0, -2.0, 0.0, 0.5, 0.5, 0.0, -2.0, -4.0],
+            [-5.0, -4.0, -3.0, -3.0, -3.0, -3.0, -4.0, -5.0]
+        ]
+
+    let whiteBishopEval = [
+        [-2.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -2.0],
+        [-1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0],
+        [-1.0, 0.0, 0.5, 1.0, 1.0, 0.5, 0.0, -1.0],
+        [-1.0, 0.5, 0.5, 1.0, 1.0, 0.5, 0.5, -1.0],
+        [-1.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, -1.0],
+        [-1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, -1.0],
+        [-1.0, 0.5, 0.0, 0.0, 0.0, 0.0, 0.5, -1.0],
+        [-2.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -2.0]
+    ]
+
+    let blackBishopEval = reverseArray(whiteBishopEval)
+
+    let whiteRookEval = [
+        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        [0.5, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.5],
+        [-0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -0.5],
+        [-0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -0.5],
+        [-0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -0.5],
+        [-0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -0.5],
+        [-0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -0.5],
+        [0.0, 0.0, 0.0, 0.5, 0.5, 0.0, 0.0, 0.0]
+    ]
+
+    let blackRookEval = reverseArray(whiteRookEval)
+
+    let evalQueen = [
+        [-2.0, -1.0, -1.0, -0.5, -0.5, -1.0, -1.0, -2.0],
+        [-1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0],
+        [-1.0, 0.0, 0.5, 0.5, 0.5, 0.5, 0.0, -1.0],
+        [-0.5, 0.0, 0.5, 0.5, 0.5, 0.5, 0.0, -0.5],
+        [0.0, 0.0, 0.5, 0.5, 0.5, 0.5, 0.0, -0.5],
+        [-1.0, 0.5, 0.5, 0.5, 0.5, 0.5, 0.0, -1.0],
+        [-1.0, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0, -1.0],
+        [-2.0, -1.0, -1.0, -0.5, -0.5, -1.0, -1.0, -2.0]
+    ]
+
+    let whiteKingEval = [
+
+        [-3.0, -4.0, -4.0, -5.0, -5.0, -4.0, -4.0, -3.0],
+        [-3.0, -4.0, -4.0, -5.0, -5.0, -4.0, -4.0, -3.0],
+        [-3.0, -4.0, -4.0, -5.0, -5.0, -4.0, -4.0, -3.0],
+        [-3.0, -4.0, -4.0, -5.0, -5.0, -4.0, -4.0, -3.0],
+        [-2.0, -3.0, -3.0, -4.0, -4.0, -3.0, -3.0, -2.0],
+        [-1.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -1.0],
+        [2.0, 2.0, 0.0, 0.0, 0.0, 0.0, 2.0, 2.0],
+        [2.0, 3.0, 1.0, 0.0, 0.0, 1.0, 3.0, 2.0]
+    ]
+
+    let blackKingEval = reverseArray(whiteKingEval)
+
+    const calculateBestMove = () => {
+        var possibleNextMoves = game.moves()
+        var bestMove = -9999
+        var bestMoveFound
+
+        for (let i = 0; i < possibleNextMoves.length; i++) {
+            let possibleNextMove = possibleNextMoves[i]
+            game.move(possibleNextMove)
+            let value = minimax(minimaxDepth, -10000, 10000, false)
+            game.undo()
+
+            if (value >= bestMove) {
+                bestMove = value
+                bestMoveFound = possibleNextMove
+            }
+        }
+
+        return game.moves({ verbose: true })[possibleNextMoves.indexOf(bestMoveFound)]
+    }
+
+    const minimax = (depth, alpha, beta, isMaximisingPlayer) => {
+        if (depth === 0) return -evaluateBoard(game.board())
+        let bestMove
+
+        let possibleNextMoves = game.moves()
+        let numPossibleMoves = possibleNextMoves.length
+
+        if (isMaximisingPlayer) {
+            bestMove = -9999
+
+            for (let i = 0; i < numPossibleMoves; i++) {
+                game.move(possibleNextMoves[i])
+                bestMove = Math.max(bestMove, minimax(depth - 1, alpha, beta, !isMaximisingPlayer))
+                game.undo()
+
+                alpha = Math.max(alpha, bestMove)
+
+                if (beta <= alpha) return bestMove
+            }
+
+        } else {
+            bestMove = 9999
+
+            for (let i = 0; i < numPossibleMoves; i++) {
+                game.move(possibleNextMoves[i])
+                bestMove = Math.min(bestMove, minimax(depth - 1, alpha, beta, !isMaximisingPlayer))
+                game.undo()
+                beta = Math.min(beta, bestMove)
+
+                if (beta <= alpha) return bestMove
+            }
+        }
+
+        return bestMove
+    }
+
+    const evaluateBoard = function (board) {
+        let totalEvaluation = 0
+
+        for (let i = 0; i < 8; i++) {
+            for (let j = 0; j < 8; j++) {
+                totalEvaluation = totalEvaluation + getPieceValue(board[i][j], i, j)
+            }
+        }
+
+        return totalEvaluation
+    }
+
+    const getPieceValue = (piece, x, y) => {
+        if (piece === null) return 0
+
+        let absoluteValue = getAbsoluteValue(piece, piece.color === 'w', x, y)
+
+        if (piece.color === 'w') return absoluteValue
+        else return -absoluteValue
+    }
+
+    const getAbsoluteValue = function (piece, isWhite, x, y) {
+        if (piece.type === 'p') return 10 + (isWhite ? whitePawnEval[y][x] : blackPawnEval[y][x])
+        else if (piece.type === 'r') return 50 + (isWhite ? whiteRookEval[y][x] : blackRookEval[y][x])
+        else if (piece.type === 'n') return 30 + knightEval[y][x]
+        else if (piece.type === 'b') return 30 + (isWhite ? whiteBishopEval[y][x] : blackBishopEval[y][x])
+        else if (piece.type === 'q') return 90 + evalQueen[y][x]
+        else if (piece.type === 'k') return 900 + (isWhite ? whiteKingEval[y][x] : blackKingEval[y][x])
+    }
+
+    return {
+        calculateBestMove,
+        game
+    }
+})()
 
 // placeholder for real prc cus i was too lazy to implement it :)
 const mve = ((t) => t)
@@ -61,17 +235,17 @@ let _moves = []
 
 // if(fs.existsSync('model.json')) agent.fromJSON(JSON.parse(fs.readFileSync('model.json', 'utf-8')))
 
-const achieve = (random) => {
+const achieve = (minimax) => {
     if(!fs.existsSync('stats.json')) fs.writeFileSync('stats.json', JSON.stringify({
-        random: 0,
+        minimax: 0,
         predicted: 0
     }))
 
     let d = JSON.parse(fs.readFileSync('stats.json', 'utf-8'))
-    d[random ? 'random' : 'predicted']++
+    d[minimax ? 'minimax' : 'predicted']++
     if (process.argv.includes('flag.stats') || BYPASS) fs.writeFileSync('./stats.json', JSON.stringify(d, null, 4))
     if (process.argv.includes('flag.log') || BYPASS) {
-        if(random) log('[INFO] Random move')
+        if(minimax) log('[INFO] Minimax move')
         else log('[INFO] Predicted move')
     }
 }
@@ -79,11 +253,19 @@ const achieve = (random) => {
 async function choice() {
     let moves = game.moves({ verbose: true })
     let agentmove = ''
-    // let m = moves[Math.floor(Math.random() * moves.length)]
     let m = (function feedback(depth = 10) {
-        if (depth === 0) {
+        if (depth <= 0) {
+            // changed this to minimax!!!!
             achieve(true)
-            return moves[Math.floor(Math.random() * moves.length)]
+
+            const STARTT = +new Date
+
+            ai.game = new Chess()
+            game.history().forEach(e => ai.game.move(e))
+
+            let output = ai.calculateBestMove()
+            log('[INFO] Minimax with depth ' + minimaxDepth + ' took: ' + (+new Date - STARTT) + 'ms')
+            return output
         }
 
         try {
@@ -102,7 +284,7 @@ async function choice() {
                 achieve(false)
                 return m2
             } else {
-                if(end - start > 1000) return feedback(depth - 2)
+                if(end - start > 700) return feedback(0)
                 else return feedback(depth - 1)
             }
         } catch (e) {
@@ -111,7 +293,7 @@ async function choice() {
         }
     })()
 
-    let m2 = m.from + m.to
+    let m2 = m.from + m.to + (m.promotion || '')
 
     game.move(m)
     _moves.push(m2)
@@ -171,6 +353,7 @@ const uci = {
             const ID = Math.floor(Math.random() * 20000).toString()
 
             const train = async (order, _moves) => {
+                fs.writeFileSync('/dev/last-train', +new Date)
 
                 let agent2 = q()
                 let data = _moves
@@ -213,7 +396,10 @@ const uci = {
 
             /*TRAIN.MJS*/
 
-            await train(result, _moves)
+            if(fs.existsSync('/dev/last-train')) {
+                if(+new Date - parseInt(fs.readFileSync('/dev/last-train', 'utf-8')) < 10000) null
+            }
+            else await train(result, _moves)
         }
     },
     'quit': () => {
