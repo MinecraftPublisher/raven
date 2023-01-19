@@ -127,9 +127,9 @@ dist
 .pnp.*
 
 # stuff
-out.txt
-info.txt
-stats.json
+**/out.txt
+**/info.txt
+**/stats.json
 
 sanitizing/unfiltered.pgn
 sanitizing/filtered.pgn
