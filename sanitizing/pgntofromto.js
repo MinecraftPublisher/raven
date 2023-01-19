@@ -5,7 +5,7 @@ console.log('Reading data...')
 
 if (!globalThis['Bun']) globalThis['Bun'] = {}
 
-let COC = 181800
+let COC = 230100
 let pgn = fs.readFileSync('filtered.pgn', 'utf-8').split('\n').slice(COC)
 
 function msToTime(duration) {

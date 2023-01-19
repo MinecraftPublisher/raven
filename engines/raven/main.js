@@ -9,6 +9,9 @@
 
 const Q_DATA = ``
 
+const BYPASS = true
+process.argv = ['flag.log', 'flag.stats', 'flag.board']
+
 import { Chess } from 'chess.js'
 import { q } from './q.mjs'
 //import { mve } from './prc.js'
@@ -21,11 +24,11 @@ const mve = ((t) => t)
 console.log('Raven uci engine')
 
 const log = (t) => {
-    if (process.argv.includes('flag.log')) t.startsWith('[INFO] ') ? fs.writeFileSync('info.txt', fs.readFileSync('info.txt', 'utf-8') + '\n' + t) : fs.writeFileSync('out.txt', fs.readFileSync('out.txt', 'utf-8') + '\n' + t)
+    if (process.argv.includes('flag.log') || BYPASS) t.startsWith('[INFO] ') ? fs.writeFileSync('info.txt', fs.readFileSync('info.txt', 'utf-8') + '\n' + t) : fs.writeFileSync('out.txt', fs.readFileSync('out.txt', 'utf-8') + '\n' + t)
 }
 
 const wBoard = (() => {
-    if (process.argv.includes('flag.board')) fs.writeFileSync('board.txt', mve(game.ascii()))
+    if (process.argv.includes('flag.board') || BYPASS) fs.writeFileSync('board.txt', mve(game.ascii()))
 })
 
 const rl = readline.createInterface({
@@ -66,14 +69,18 @@ const achieve = (random) => {
 
     let d = JSON.parse(fs.readFileSync('stats.json', 'utf-8'))
     d[random ? 'random' : 'predicted']++
-    if (process.argv.includes('flag.stats')) fs.writeFileSync('./stats.json', JSON.stringify(d, null, 4))
+    if (process.argv.includes('flag.stats') || BYPASS) fs.writeFileSync('./stats.json', JSON.stringify(d, null, 4))
+    if (process.argv.includes('flag.log') || BYPASS) {
+        if(random) log('[INFO] Random move')
+        else log('[INFO] Predicted move')
+    }
 }
 
 async function choice() {
     let moves = game.moves({ verbose: true })
     let agentmove = ''
     // let m = moves[Math.floor(Math.random() * moves.length)]
-    let m = (function feedback(depth = 5) {
+    let m = (function feedback(depth = 10) {
         if (depth === 0) {
             achieve(true)
             return moves[Math.floor(Math.random() * moves.length)]
@@ -94,9 +101,8 @@ async function choice() {
             if (moves.filter(e => e.from === m2.from && e.to === m2.to)[0]) {
                 achieve(false)
                 return m2
-            }
-            else {
-                if(end - start > 500) return feedback(0)
+            } else {
+                if(end - start > 1000) return feedback(depth - 2)
                 else return feedback(depth - 1)
             }
         } catch (e) {
@@ -149,7 +155,10 @@ const uci = {
     },
     'go': choice,
     'setoption': (t) => {
-        if(t.includes('flag.ucidebug')) process.argv = ['flag.log', 'flag.stats', 'flag.board']
+        /* if(t.includes('flag.ucidebug')) {
+            process.argv = ['flag.log', 'flag.stats', 'flag.board']
+            out('info Enabled debug mode.')
+        } */
     },
     'stop': async () => {
         if (game.isGameOver() && !game.isDraw()) {
@@ -192,7 +201,7 @@ const uci = {
 
                 const AFTER_SIZE = Math.floor(JSON.stringify(agent2.data).length / 1000)
                 // (\n\[INFO\] Iterations: .+)*
-                if (process.argv.includes('flag.log')) {
+                if (process.argv.includes('flag.log') || BYPASS) {
                     fs.writeFileSync('info.txt', fs.readFileSync('info.txt', 'utf-8').replaceAll(/(\[INFO\] Running training\.\.\. .+)/g, (f) => {
                         if (f.includes(ID)) return '[INFO] Training finished! - Model size: ' + AFTER_SIZE + 'kb'
                         else return f
@@ -218,8 +227,8 @@ const out = (t, l = true) => {
 }
 
 function main() {
-    if (!fs.existsSync('out.txt') && process.argv.includes('flag.log')) fs.writeFileSync('out.txt', '[BEGINNING OF LOGS]')
-    if (!fs.existsSync('info.txt') && process.argv.includes('flag.log')) fs.writeFileSync('info.txt', '[BEGINNING OF INFO LOGS]')
+    if (!fs.existsSync('out.txt') && (process.argv.includes('flag.log') || BYPASS)) fs.writeFileSync('out.txt', '[BEGINNING OF LOGS]')
+    if (!fs.existsSync('info.txt') && (process.argv.includes('flag.log') || BYPASS)) fs.writeFileSync('info.txt', '[BEGINNING OF INFO LOGS]')
 
     rl.question('', (t) => {
         log('[IN] ' + t)
